@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz SQL et PostgreSQL</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .quiz-container {
+            background: #fff;
+            max-width: 800px;
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .progress {
+            margin-bottom: 20px;
+            color: #7f8c8d;
+            font-weight: bold;
+        }
+        .question {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option {
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+            text-align: left;
+        }
+        .option:hover:not(.disabled) {
+            background: #d5dbdb;
+            border-color: #95a5a6;
+        }
+        .option.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .option.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            background: #e8f4f8;
+            border-left: 5px solid #3498db;
+        }
+        .btn-next, .btn-restart {
+            margin-top: 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            display: none;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        .btn-next:hover, .btn-restart:hover {
+            background: #2980b9;
+        }
+        .results {
+            text-align: center;
+            display: none;
+        }
+        .results h2 {
+            font-size: 2em;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quiz-container">
+    <h1>Quiz SQL et PostgreSQL : Concepts Essentiels</h1>
+    
+    <div id="quiz-block">
+        <div class="progress" id="progress">Question 1 / 8</div>
+        <div class="question" id="question">Chargement de la question...</div>
+        <div class="options" id="options"></div>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn-next" id="btn-next" onclick="nextQuestion()">Question Suivante</button>
+    </div>
+
+    <div class="results" id="results-block">
+        <h2>Quiz Terminé !</h2>
+        <p>Votre score : <strong id="score">0</strong> / 8</p>
+        <button class="btn-restart" id="btn-restart" onclick="restartQuiz()" style="display: inline-block;">Recommencer</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            "question": "À quoi sert principalement un \"schéma\" (schema) dans une base de données PostgreSQL ?",
+            "answerOptions": [
+                {"text": "À organiser logiquement les tables et autres objets de la base de données.", "rationale": "Les schémas agissent comme des espaces de noms (namespaces) pour organiser les objets, faciliter la gestion des permissions et éviter les conflits de noms.", "isCorrect": true},
+                {"text": "À stocker les sauvegardes complètes de la base de données.", "rationale": "Les sauvegardes sont généralement gérées par des utilitaires externes (comme pg_dump) et stockées dans des fichiers, pas dans des schémas.", "isCorrect": false},
+                {"text": "À définir le type de données matériel d'une colonne.", "rationale": "Les types de données (int, varchar, etc.) sont définis au niveau de la création de la table, tandis que le schéma est un conteneur pour la table entière.", "isCorrect": false},
+                {"text": "À chiffrer les données sensibles stockées sur le disque.", "rationale": "Le chiffrement au repos est géré par le système de fichiers ou des configurations spécifiques du serveur, et non par la structure logique qu'est le schéma.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "Dans PostgreSQL, qu'est-ce qu'un \"rôle\" (role) ?",
+            "answerOptions": [
+                {"text": "Une contrainte appliquée à une colonne pour empêcher les valeurs en double.", "rationale": "Empêcher les doublons est le rôle d'une contrainte d'unicité (UNIQUE constraint), pas d'un rôle système.", "isCorrect": false},
+                {"text": "Une fonction automatique qui s'exécute lors d'une insertion de données.", "rationale": "Une action automatique liée à une modification de données correspond à la définition d'un trigger (déclencheur).", "isCorrect": false},
+                {"text": "Une entité qui peut posséder des objets de base de données et avoir des privilèges d'accès.", "rationale": "Un rôle regroupe les concepts d'utilisateur (s'il peut se connecter) et de groupe, centralisant ainsi la gestion des permissions et de la propriété des objets.", "isCorrect": true},
+                {"text": "Un type d'index utilisé pour accélérer les recherches textuelles.", "rationale": "L'accélération des recherches textuelles est gérée par des index spécifiques (comme GIN ou GiST), pas par des rôles.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "Que permet de faire la fonctionnalité RLS (Row-Level Security) ?",
+            "answerOptions": [
+                {"text": "Verrouiller une table entière pour empêcher toute modification pendant une sauvegarde.", "rationale": "Le verrouillage de table est géré par des commandes comme LOCK TABLE, ce qui est différent de la sécurité granulaire des données.", "isCorrect": false},
+                {"text": "Restreindre l'accès en lecture ou en écriture à certaines lignes spécifiques d'une table en fonction de l'utilisateur.", "rationale": "RLS permet de définir des politiques de sécurité qui filtrent dynamiquement les lignes visibles ou modifiables selon le contexte (ex: l'utilisateur ne voit que ses propres factures).", "isCorrect": true},
+                {"text": "Sécuriser la connexion réseau entre le client et le serveur de base de données.", "rationale": "La sécurité des communications réseau est généralement assurée par le protocole SSL/TLS, indépendamment de la fonctionnalité RLS.", "isCorrect": false},
+                {"text": "Chiffrer chaque ligne d'une table avec une clé de sécurité différente.", "rationale": "RLS filtre l'accès aux lignes (qui peut les voir), mais ne s'occupe pas du chiffrement cryptographique des données elles-mêmes.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "Quel est le rôle principal d'un \"trigger\" (déclencheur) en SQL ?",
+            "answerOptions": [
+                {"text": "Déclencher une alerte par e-mail lorsque l'espace disque de la base de données est presque plein.", "rationale": "La surveillance de l'infrastructure physique relève d'outils de monitoring externes, pas des mécanismes internes de la base de données.", "isCorrect": false},
+                {"text": "Exécuter automatiquement une fonction spécifique en réponse à un événement (INSERT, UPDATE, DELETE) sur une table.", "rationale": "Un déclencheur intercepte les événements de modification de données pour exécuter une logique métier, comme la mise à jour d'une date de modification ou la tenue d'un journal d'audit.", "isCorrect": true},
+                {"text": "Forcer la suppression d'une base de données entière si une erreur critique se produit.", "rationale": "Les triggers agissent au niveau des tables ou des vues, ils ne sont pas conçus pour des actions destructives globales sur l'architecture de la base.", "isCorrect": false},
+                {"text": "Générer des rapports statistiques quotidiens à une heure précise.", "rationale": "L'exécution à des heures précises est gérée par des planificateurs de tâches (comme cron ou pg_cron), alors qu'un trigger réagit à une action sur les données.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "Pourquoi utiliserait-on une fonction (ou procédure stockée) en SQL ?",
+            "answerOptions": [
+                {"text": "Pour augmenter automatiquement la mémoire RAM allouée au serveur PostgreSQL.", "rationale": "L'allocation de mémoire (RAM) est définie dans les fichiers de configuration du serveur (comme postgresql.conf) et ne se modifie pas dynamiquement via des fonctions SQL classiques.", "isCorrect": false},
+                {"text": "Pour créer une interface graphique utilisateur (GUI) directement dans la base de données.", "rationale": "PostgreSQL est un moteur de base de données backend ; la création d'interfaces graphiques est le rôle des applications front-end ou des clients lourds.", "isCorrect": false},
+                {"text": "Pour convertir automatiquement toutes les bases de données relationnelles en bases NoSQL.", "rationale": "Une fonction exécute des opérations au sein du modèle relationnel existant, elle ne transforme pas l'architecture fondamentale du système de gestion de base de données.", "isCorrect": false},
+                {"text": "Pour encapsuler et réutiliser un bloc de code SQL ou de logique métier directement sur le serveur.", "rationale": "L'encapsulation via les fonctions permet de centraliser la logique complexe, d'optimiser les performances en réduisant les transferts réseau et de réutiliser le code facilement.", "isCorrect": true}
+            ]
+        },
+        {
+            "question": "Quelle est la particularité du type de données `JSONB` dans PostgreSQL par rapport au type `JSON` classique ?",
+            "answerOptions": [
+                {"text": "Il ne permet de stocker que des valeurs booléennes au sein d'un document.", "rationale": "Le \"B\" de JSONB ne signifie pas \"Boolean\", ce format peut stocker tous les types de valeurs valides dans un document JSON (chaînes, nombres, tableaux, etc.).", "isCorrect": false},
+                {"text": "Il stocke les données dans un format binaire décomposé, rendant le traitement et les recherches beaucoup plus rapides.", "rationale": "Bien que l'insertion soit légèrement plus lente, le format binaire JSONB élimine les espaces blancs et stocke la structure de manière optimisée pour permettre l'indexation et des requêtes très rapides.", "isCorrect": true},
+                {"text": "Il compresse les données JSON pour qu'elles prennent exactement un octet (Byte) d'espace.", "rationale": "Il est impossible de compresser un document entier dans un seul octet ; la taille de stockage dépend du contenu réel du document.", "isCorrect": false},
+                {"text": "Il supprime automatiquement toutes les clés du document pour ne garder que les valeurs.", "rationale": "JSONB conserve parfaitement la structure clé-valeur du document original, sinon il perdrait toute son utilité pour représenter des objets.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "À quoi servent des extensions PostgreSQL comme PostGIS ou pgvector ?",
+            "answerOptions": [
+                {"text": "À connecter PostgreSQL à des bases de données concurrentes comme MySQL.", "rationale": "Bien qu'il existe des extensions pour cela (les Foreign Data Wrappers), PostGIS et pgvector ont d'autres fonctions bien spécifiques liées aux types de données.", "isCorrect": false},
+                {"text": "À changer le langage de requête de la base de données de SQL à Python.", "rationale": "Il existe des extensions procédurales (comme plpythonu) pour écrire des fonctions en Python, mais l'interface principale de la base reste toujours le SQL.", "isCorrect": false},
+                {"text": "À ajouter de nouvelles fonctionnalités au moteur, comme la gestion de données spatiales ou vectorielles.", "rationale": "Les extensions enrichissent PostgreSQL en lui apportant des types de données et des fonctions spécialisés, permettant de manipuler des cartes (PostGIS) ou des données d'Intelligence Artificielle (pgvector).", "isCorrect": true},
+                {"text": "À étendre la capacité de stockage d'une table au-delà de la limite physique du disque dur.", "rationale": "Aucune extension logicielle ne peut contourner les limites physiques du matériel sur lequel le serveur est installé.", "isCorrect": false}
+            ]
+        },
+        {
+            "question": "Quel est le but principal de la création d'un index sur une table SQL ?",
+            "answerOptions": [
+                {"text": "Réduire la taille de la table sur le disque dur en compressant les données.", "rationale": "Au contraire, un index est une structure de données supplémentaire qui consomme de l'espace disque en plus de la table d'origine.", "isCorrect": false},
+                {"text": "Accélérer considérablement la recherche et la récupération des données lors des requêtes.", "rationale": "À l'image de l'index d'un livre, un index SQL crée une structure (souvent un arbre) qui permet au moteur de trouver rapidement les lignes sans avoir à parcourir (scanner) toute la table.", "isCorrect": true},
+                {"text": "Empêcher les utilisateurs de supprimer accidentellement des données importantes.", "rationale": "La protection contre la suppression relève de la gestion des permissions (rôles) ou de l'utilisation de triggers, pas des index.", "isCorrect": false},
+                {"text": "Trier physiquement et de manière permanente toutes les lignes de la table.", "rationale": "Dans PostgreSQL, l'ordre physique des lignes (heap) n'est généralement pas garanti par un index classique, l'index est une structure séparée des données brutes.", "isCorrect": false}
+            ]
+        }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    const questionEl = document.getElementById('question');
+    const optionsEl = document.getElementById('options');
+    const feedbackEl = document.getElementById('feedback');
+    const btnNext = document.getElementById('btn-next');
+    const progressEl = document.getElementById('progress');
+    const quizBlock = document.getElementById('quiz-block');
+    const resultsBlock = document.getElementById('results-block');
+    const scoreEl = document.getElementById('score');
+
+    function loadQuestion() {
+        // Réinitialiser l'interface pour la nouvelle question
+        feedbackEl.style.display = 'none';
+        btnNext.style.display = 'none';
+        optionsEl.innerHTML = '';
+        
+        const currentQuestion = quizData[currentQuestionIndex];
+        
+        // Mettre à jour le texte
+        progressEl.innerText = `Question ${currentQuestionIndex + 1} / ${quizData.length}`;
+        questionEl.innerHTML = currentQuestion.question;
+
+        // Générer les boutons d'options
+        currentQuestion.answerOptions.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.innerText = option.text;
+            button.classList.add('option');
+            button.onclick = () => selectAnswer(option, button);
+            optionsEl.appendChild(button);
+        });
+    }
+
+    function selectAnswer(option, selectedButton) {
+        // Désactiver tous les boutons
+        const buttons = optionsEl.querySelectorAll('.option');
+        buttons.forEach(btn => {
+            btn.classList.add('disabled');
+            btn.onclick = null; // Empêcher les clics multiples
+        });
+
+        // Appliquer les styles et vérifier la réponse
+        if (option.isCorrect) {
+            selectedButton.classList.add('correct');
+            score++;
+            feedbackEl.innerHTML = `<strong>✅ Bonne réponse !</strong><br>${option.rationale}`;
+        } else {
+            selectedButton.classList.add('incorrect');
+            feedbackEl.innerHTML = `<strong>❌ Mauvaise réponse.</strong><br>${option.rationale}`;
+            
+            // Montrer la bonne réponse
+            quizData[currentQuestionIndex].answerOptions.forEach((opt, idx) => {
+                if(opt.isCorrect) {
+                    buttons[idx].classList.add('correct');
+                }
+            });
+        }
+
+        // Afficher l'explication et le bouton suivant
+        feedbackEl.style.display = 'block';
+        
+        if (currentQuestionIndex < quizData.length - 1) {
+            btnNext.innerText = "Question Suivante";
+        } else {
+            btnNext.innerText = "Voir les résultats";
+        }
+        btnNext.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        quizBlock.style.display = 'none';
+        resultsBlock.style.display = 'block';
+        scoreEl.innerText = score;
+    }
+
+    function restartQuiz() {
+        currentQuestionIndex = 0;
+        score = 0;
+        quizBlock.style.display = 'block';
+        resultsBlock.style.display = 'none';
+        loadQuestion();
+    }
+
+    // Charger la première question au démarrage
+    loadQuestion();
+</script>
+
+</body>
+</html>
