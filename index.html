@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz SQL et PostgreSQL</title>
+    <title>Quiz SQL et PostgreSQL - Mode Multi-joueurs</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -24,93 +24,53 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             padding: 30px;
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        .progress {
-            margin-bottom: 20px;
-            color: #7f8c8d;
-            font-weight: bold;
-        }
-        .question {
-            font-size: 1.2em;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-        .options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .option {
-            background: #ecf0f1;
-            border: 2px solid #bdc3c7;
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 1em;
-            text-align: left;
-        }
-        .option:hover:not(.disabled) {
-            background: #d5dbdb;
-            border-color: #95a5a6;
-        }
-        .option.correct {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-        .option.incorrect {
-            background: #f8d7da;
-            border-color: #dc3545;
-            color: #721c24;
-        }
-        .option.disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-        .feedback {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-            background: #e8f4f8;
-            border-left: 5px solid #3498db;
-        }
-        .btn-next, .btn-restart {
-            margin-top: 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            display: none;
-            transition: background 0.3s;
-            width: 100%;
-        }
-        .btn-next:hover, .btn-restart:hover {
-            background: #2980b9;
-        }
-        .results {
-            text-align: center;
-            display: none;
-        }
-        .results h2 {
-            font-size: 2em;
-            color: #2c3e50;
-        }
+        h1 { text-align: center; color: #2c3e50; }
+        
+        /* Styles pour l'écran de connexion */
+        .login-form { display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 0 auto; }
+        .login-form input { padding: 12px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 1em; }
+        .btn-start { background: #27ae60; color: white; border: none; padding: 15px; border-radius: 5px; font-size: 1.1em; cursor: pointer; transition: background 0.3s; }
+        .btn-start:hover { background: #2ecc71; }
+
+        /* Styles du Quiz */
+        .progress { margin-bottom: 20px; color: #7f8c8d; font-weight: bold; }
+        .question { font-size: 1.2em; margin-bottom: 20px; font-weight: 600; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option { background: #ecf0f1; border: 2px solid #bdc3c7; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-size: 1em; text-align: left; }
+        .option:hover:not(.disabled) { background: #d5dbdb; border-color: #95a5a6; }
+        .option.correct { background: #d4edda; border-color: #28a745; color: #155724; }
+        .option.incorrect { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .option.disabled { cursor: not-allowed; opacity: 0.7; }
+        .feedback { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; background: #e8f4f8; border-left: 5px solid #3498db; }
+        
+        /* Boutons de navigation */
+        .btn-next, .btn-restart { margin-top: 20px; background: #3498db; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 1em; display: none; width: 100%; transition: background 0.3s; }
+        .btn-next:hover, .btn-restart:hover { background: #2980b9; }
+
+        /* Styles des résultats et du classement */
+        .results { text-align: center; display: none; }
+        .results h2 { font-size: 2em; color: #2c3e50; }
+        .leaderboard { margin-top: 30px; text-align: left; width: 100%; border-collapse: collapse; }
+        .leaderboard th, .leaderboard td { padding: 12px; border-bottom: 1px solid #ddd; }
+        .leaderboard th { background-color: #2c3e50; color: white; }
+        .leaderboard tr:nth-child(even) { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
 
 <div class="quiz-container" id="quiz-container">
-    <h1>Quiz SQL et PostgreSQL : Concepts Essentiels</h1>
+    <h1>Quiz SQL et PostgreSQL</h1>
     
-    <div id="quiz-block">
+    <div id="login-block">
+        <p style="text-align: center; margin-bottom: 20px;">Entrez vos informations pour commencer :</p>
+        <div class="login-form">
+            <input type="text" id="firstName" placeholder="Prénom" required>
+            <input type="text" id="lastName" placeholder="Nom" required>
+            <button class="btn-start" onclick="startQuiz()">Commencer le Quiz</button>
+        </div>
+    </div>
+
+    <div id="quiz-block" style="display: none;">
         <div class="progress" id="progress">Question 1 / 8</div>
         <div class="question" id="question">Chargement de la question...</div>
         <div class="options" id="options"></div>
@@ -120,8 +80,22 @@
 
     <div class="results" id="results-block">
         <h2>Quiz Terminé !</h2>
-        <p>Votre score : <strong id="score">0</strong> / 8</p>
-        <button class="btn-restart" id="btn-restart" onclick="restartQuiz()" style="display: inline-block;">Recommencer</button>
+        <p><span id="currentPlayerName"></span>, votre score est : <strong id="score">0</strong> / 8</p>
+        
+        <h3 style="margin-top: 40px;">Classement des joueurs</h3>
+        <table class="leaderboard">
+            <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                </tbody>
+        </table>
+
+        <button class="btn-restart" id="btn-restart" onclick="restartQuiz()" style="display: inline-block;">Nouveau Joueur</button>
     </div>
 </div>
 
@@ -203,29 +177,48 @@
 
     let currentQuestionIndex = 0;
     let score = 0;
+    let currentUser = { firstName: "", lastName: "" };
 
+    // Éléments du DOM
+    const loginBlock = document.getElementById('login-block');
+    const quizBlock = document.getElementById('quiz-block');
+    const resultsBlock = document.getElementById('results-block');
     const questionEl = document.getElementById('question');
     const optionsEl = document.getElementById('options');
     const feedbackEl = document.getElementById('feedback');
     const btnNext = document.getElementById('btn-next');
     const progressEl = document.getElementById('progress');
-    const quizBlock = document.getElementById('quiz-block');
-    const resultsBlock = document.getElementById('results-block');
     const scoreEl = document.getElementById('score');
+    const currentPlayerNameEl = document.getElementById('currentPlayerName');
+    const leaderboardBody = document.getElementById('leaderboard-body');
+
+    // Démarrer le quiz avec un utilisateur
+    function startQuiz() {
+        const first = document.getElementById('firstName').value.trim();
+        const last = document.getElementById('lastName').value.trim();
+
+        if (!first || !last) {
+            alert("Veuillez entrer votre prénom et votre nom pour continuer.");
+            return;
+        }
+
+        currentUser = { firstName: first, lastName: last };
+        
+        loginBlock.style.display = 'none';
+        quizBlock.style.display = 'block';
+        loadQuestion();
+    }
 
     function loadQuestion() {
-        // Réinitialiser l'interface pour la nouvelle question
         feedbackEl.style.display = 'none';
         btnNext.style.display = 'none';
         optionsEl.innerHTML = '';
         
         const currentQuestion = quizData[currentQuestionIndex];
         
-        // Mettre à jour le texte
-        progressEl.innerText = `Question ${currentQuestionIndex + 1} / ${quizData.length}`;
+        progressEl.innerText = `Question ${currentQuestionIndex + 1} / ${quizData.length} (Joueur : ${currentUser.firstName})`;
         questionEl.innerHTML = currentQuestion.question;
 
-        // Générer les boutons d'options
         currentQuestion.answerOptions.forEach((option, index) => {
             const button = document.createElement('button');
             button.innerText = option.text;
@@ -236,14 +229,12 @@
     }
 
     function selectAnswer(option, selectedButton) {
-        // Désactiver tous les boutons
         const buttons = optionsEl.querySelectorAll('.option');
         buttons.forEach(btn => {
             btn.classList.add('disabled');
-            btn.onclick = null; // Empêcher les clics multiples
+            btn.onclick = null; 
         });
 
-        // Appliquer les styles et vérifier la réponse
         if (option.isCorrect) {
             selectedButton.classList.add('correct');
             score++;
@@ -252,7 +243,6 @@
             selectedButton.classList.add('incorrect');
             feedbackEl.innerHTML = `<strong>❌ Mauvaise réponse.</strong><br>${option.rationale}`;
             
-            // Montrer la bonne réponse
             quizData[currentQuestionIndex].answerOptions.forEach((opt, idx) => {
                 if(opt.isCorrect) {
                     buttons[idx].classList.add('correct');
@@ -260,7 +250,6 @@
             });
         }
 
-        // Afficher l'explication et le bouton suivant
         feedbackEl.style.display = 'block';
         
         if (currentQuestionIndex < quizData.length - 1) {
@@ -284,18 +273,65 @@
         quizBlock.style.display = 'none';
         resultsBlock.style.display = 'block';
         scoreEl.innerText = score;
+        currentPlayerNameEl.innerText = `${currentUser.firstName} ${currentUser.lastName}`;
+        
+        saveResultToLocal();
+        renderLeaderboard();
     }
 
+    // Sauvegarder le résultat dans le navigateur
+    function saveResultToLocal() {
+        // Récupérer l'historique ou créer un tableau vide
+        const history = JSON.parse(localStorage.getItem('sqlQuizScores')) || [];
+        
+        // Obtenir la date au format lisible
+        const today = new Date();
+        const dateString = today.toLocaleDateString('fr-FR') + ' ' + today.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+
+        // Ajouter le nouveau score
+        history.push({
+            name: `${currentUser.firstName} ${currentUser.lastName}`,
+            score: score,
+            total: quizData.length,
+            date: dateString
+        });
+
+        // Sauvegarder dans le localStorage
+        localStorage.setItem('sqlQuizScores', JSON.stringify(history));
+    }
+
+    // Afficher le tableau des scores
+    function renderLeaderboard() {
+        const history = JSON.parse(localStorage.getItem('sqlQuizScores')) || [];
+        
+        // Trier du meilleur au moins bon score
+        history.sort((a, b) => b.score - a.score);
+        
+        leaderboardBody.innerHTML = '';
+        
+        history.forEach(entry => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${entry.name}</td>
+                <td><strong>${entry.score} / ${entry.total}</strong></td>
+                <td>${entry.date}</td>
+            `;
+            leaderboardBody.appendChild(tr);
+        });
+    }
+
+    // Recommencer avec un nouveau joueur
     function restartQuiz() {
         currentQuestionIndex = 0;
         score = 0;
-        quizBlock.style.display = 'block';
+        currentUser = { firstName: "", lastName: "" };
+        
+        document.getElementById('firstName').value = '';
+        document.getElementById('lastName').value = '';
+        
         resultsBlock.style.display = 'none';
-        loadQuestion();
+        loginBlock.style.display = 'block';
     }
-
-    // Charger la première question au démarrage
-    loadQuestion();
 </script>
 
 </body>
